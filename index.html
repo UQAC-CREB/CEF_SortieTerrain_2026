@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CEF 2026 — Sortie Terrain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root {
+    --vert:   #2d6a4f;
+    --vert2:  #40916c;
+    --vert3:  #52b788;
+    --creme:  #f8f4ed;
+    --brun:   #3d2b1f;
+    --or:     #d4a853;
+    --blanc:  #ffffff;
+    --gris:   #e8e2d8;
+    --panel-w: 320px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--brun);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--brun);
+    color: var(--creme);
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 2px solid var(--vert);
+    z-index: 1000;
+  }
+  .header-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-title span { color: var(--vert3); }
+  .header-badge {
+    background: var(--vert);
+    color: var(--creme);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+  .burger {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    flex-direction: column;
+    gap: 5px;
+    margin-left: 10px;
+  }
+  .burger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--creme);
+    border-radius: 2px;
+  }
+
+  /* LAYOUT */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* PANNEAU */
+  .panel {
+    width: var(--panel-w);
+    flex-shrink: 0;
+    background: var(--creme);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 3px solid var(--vert);
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+  .panel-header {
+    background: var(--vert);
+    color: var(--creme);
+    padding: 12px 18px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Select */
+  .select-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--brun);
+    margin-bottom: 5px;
+  }
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--vert);
+    pointer-events: none;
+  }
+  select#site-select {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border: 2px solid var(--vert2);
+    border-radius: 4px;
+    background: var(--blanc);
+    color: var(--brun);
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    appearance: none;
+    cursor: pointer;
+  }
+  select#site-select:focus { outline: none; border-color: var(--vert); }
+
+  /* Site card */
+  .site-card {
+    background: var(--blanc);
+    border: 2px solid var(--gris);
+    border-radius: 6px;
+    overflow: hidden;
+    animation: fadeUp 0.22s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .site-card-head {
+    background: var(--vert);
+    color: var(--creme);
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .site-card-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    flex: 1;
+    line-height: 1.2;
+  }
+  .chrono-badge {
+    background: var(--or);
+    color: var(--brun);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .site-card-body { padding: 12px 14px; }
+  .coords-line {
+    font-size: 0.76rem;
+    color: #777;
+    margin-bottom: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.04em;
+  }
+  .pdf-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--vert);
+    margin-bottom: 7px;
+  }
+  .pdf-list { display: flex; flex-direction: column; gap: 5px; }
+  .pdf-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    background: var(--vert);
+    color: var(--creme);
+    border: none;
+    border-radius: 4px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+    line-height: 1.25;
+  }
+  .pdf-btn:hover { background: var(--vert2); transform: translateX(2px); }
+  .pdf-btn:active { background: var(--brun); }
+  .pdf-btn .lbl { flex: 1; text-align: left; }
+  .no-pdf { font-size: 0.8rem; color: #999; font-style: italic; }
+
+  /* Bouton centrer */
+  .btn-center {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px;
+    background: none;
+    border: 2px solid var(--vert2);
+    border-radius: 4px;
+    color: var(--vert);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-center:hover { background: var(--vert); color: var(--creme); border-color: var(--vert); }
+
+  /* Légende */
+  .legend {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--gris);
+  }
+  .legend-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 7px;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.79rem;
+    color: #666;
+    margin-bottom: 4px;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* CARTE */
+  #map { flex: 1; height: 100%; min-width: 0; }
+
+  /* Labels carte */
+  .map-label {
+    background: rgba(255,255,255,0.95);
+    border: 1.5px solid #222;
+    border-radius: 3px;
+    padding: 3px 7px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1a1a1a;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    pointer-events: none;
+  }
+  .map-label.active {
+    background: var(--vert);
+    color: var(--creme);
+    border-color: var(--brun);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    font-size: 13px;
+  }
+
+  /* Popup */
+  .leaflet-popup-content-wrapper {
+    border-radius: 6px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.28) !important;
+    border: 2px solid var(--vert) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  .leaflet-popup-content { margin: 0 !important; width: 220px !important; }
+  .popup-head {
+    background: var(--vert);
+    color: var(--creme);
+    padding: 9px 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .popup-body { padding: 10px 12px; background: var(--blanc); }
+  .popup-chrono {
+    display: inline-block;
+    background: var(--or);
+    color: var(--brun);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    margin-bottom: 8px;
+  }
+  .popup-pdfs { display: flex; flex-direction: column; gap: 5px; }
+  .popup-pdf-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    background: var(--vert);
+    color: var(--creme);
+    border-radius: 3px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.14s;
+  }
+  .popup-pdf-btn:hover { background: var(--brun); }
+  .leaflet-popup-tip-container { display: none !important; }
+  .leaflet-popup-close-button { color: var(--creme) !important; top: 6px !important; right: 8px !important; }
+
+  /* MOBILE */
+  @media (max-width: 680px) {
+    .burger { display: flex; }
+    .main { position: relative; }
+    .panel {
+      position: absolute;
+      top: 0; left: 0; height: 100%;
+      transform: translateX(-100%);
+      box-shadow: 4px 0 20px rgba(0,0,0,0.35);
+      width: min(320px, 90vw);
+    }
+    .panel.open { transform: translateX(0); }
+    #map { width: 100vw; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">🌲 <span>CEF</span>&nbsp;Sortie terrain</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="header-badge">Colloque 2026</div>
+    <button class="burger" id="burger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="main">
+
+  <aside class="panel" id="panel">
+    <div class="panel-header">📍 Points d'intérêt</div>
+    <div class="panel-body">
+
+      <div>
+        <div class="select-label">Naviguer vers un site</div>
+        <div class="select-wrap">
+          <select id="site-select">
+            <option value="">— Sélectionner —</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="card-container"></div>
+
+      <button class="btn-center" id="btn-center" onclick="centerOnSelected()">
+        🎯 Centrer la carte sur ce site
+      </button>
+
+      <div class="legend">
+        <div class="legend-title">Légende</div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#c0392b;border:2px solid #fff;outline:1.5px solid #333;"></div>
+          <span>Site avec fiches PDF</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background:#7f8c8d;border:2px solid #fff;outline:1.5px solid #333;"></div>
+          <span>Point de passage</span>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <div id="map"></div>
+</div>
+
+<script>
+// ═══════════════════════════════
+// DONNÉES (extraites du shapefile)
+// Coordonnées WGS84 réelles
+// ═══════════════════════════════
+const POINTS = [
+  {
+    id: 1,
+    lieu: "Départ — Pavillon Pouliot",
+    chrono: "",
+    lat: 46.778950, lon: -71.275955,
+    pdfs: []
+  },
+  {
+    id: 2,
+    lieu: "Base de plein-air Sainte-Foy",
+    chrono: "Site 1",
+    lat: 46.786193, lon: -71.334128,
+    pdfs: [
+      { label: "Sainte-Foy — Partie 1", file: "pdf/Site_1_BaseSainteFoy_1.pdf" },
+      { label: "Sainte-Foy — Suite",    file: "pdf/Site_1_BaseSainteFoy_Suite.pdf" }
+    ]
+  },
+  {
+    id: 3,
+    lieu: "Duchesnay — Arrêt 1",
+    chrono: "Site 2",
+    lat: 46.870412, lon: -71.653533,
+    pdfs: [
+      { label: "Vue générale",    file: "pdf/Site_2_Duchesnay_2.pdf" },
+      { label: "Contemporain",    file: "pdf/Site_2_Duchesnay_arrêt1_Contemporain.pdf" },
+      { label: "Historique",      file: "pdf/Site_2_Duchesnay_arrêt1_Historique.pdf" }
+    ]
+  },
+  {
+    id: 4,
+    lieu: "Duchesnay — Arrêt 2",
+    chrono: "Site 3",
+    lat: 46.874786, lon: -71.660573,
+    pdfs: [
+      { label: "Dendrochronologie", file: "pdf/Site_3_Duchesnay_arrêt2_Dendro.pdf" },
+      { label: "Éclaircie",         file: "pdf/Site_3_Duchesnay_arrêt2_Éclaircie.pdf" },
+      { label: "Jardinage",         file: "pdf/Site_3_Duchesnay_arrêt2_Jardinage.pdf" }
+    ]
+  },
+  {
+    id: 5,
+    lieu: "Duchesnay — Arrêt 3",
+    chrono: "Site 4",
+    lat: 46.876079, lon: -71.661302,
+    pdfs: []
+  },
+  {
+    id: 6,
+    lieu: "École de foresterie Duchesnay (lunch)",
+    chrono: "",
+    lat: 46.867432, lon: -71.643425,
+    pdfs: []
+  }
+];
+
+// ═══════════════════════════════
+// CARTE LEAFLET
+// ═══════════════════════════════
+const map = L.map('map', { center: [46.83, -71.47], zoom: 11, zoomControl: true });
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(map);
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '', maxZoom: 19, opacity: 0.65 }).addTo(map);
+
+// Icône pin SVG
+function pinIcon(hasPdf, active) {
+  const col   = hasPdf ? '#c0392b' : '#7f8c8d';
+  const dark  = hasPdf ? '#8b0000' : '#555';
+  const s     = active ? 1.4 : 1.0;
+  const glow  = active ? 'filter:drop-shadow(0 0 7px rgba(255,210,0,0.95));' : '';
+  const w = Math.round(30*s), h = Math.round(42*s);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 42" width="${w}" height="${h}">
+    <rect x="13.5" y="27" width="3" height="11" rx="1.5" fill="#b0b8c0"/>
+    <ellipse cx="15" cy="40" rx="7" ry="3" fill="#777" opacity="0.45"/>
+    <circle cx="15" cy="15" r="12" fill="${dark}"/>
+    <circle cx="15" cy="15" r="10" fill="${col}"/>
+    <circle cx="11.5" cy="11" r="3" fill="rgba(255,255,255,0.28)"/>
+  </svg>`;
+  return L.divIcon({
+    html: `<div style="${glow}">${svg}</div>`,
+    iconSize: [w, h], iconAnchor: [w/2, h],
+    popupAnchor: [0, -h+4], className: ''
+  });
+}
+
+const markers = {}, labelMarkers = {};
+
+POINTS.forEach(pt => {
+  // Label permanent
+  const lbl = L.divIcon({
+    html: `<div class="map-label" id="lbl-${pt.id}">${pt.lieu}</div>`,
+    className: '', iconAnchor: [-(pt.lieu.length * 3.5), 14]
+  });
+  labelMarkers[pt.id] = L.marker([pt.lat, pt.lon], { icon: lbl, interactive: false }).addTo(map);
+
+  // Marqueur
+  const mk = L.marker([pt.lat, pt.lon], { icon: pinIcon(pt.pdfs.length > 0, false) });
+  mk.bindPopup(popupHtml(pt), { maxWidth: 240, minWidth: 220, closeButton: true });
+  mk.on('click', () => selectSite(pt.id, false));
+  mk.addTo(map);
+  markers[pt.id] = mk;
+});
+
+function popupHtml(pt) {
+  const chronoTag = pt.chrono
+    ? `<div class="popup-chrono">${pt.chrono}</div>` : '';
+  const pdfsEl = pt.pdfs.length > 0
+    ? `<div class="popup-pdfs">${pt.pdfs.map(p =>
+        `<a class="popup-pdf-btn" href="${p.file}" download>📄 ${p.label}</a>`
+      ).join('')}</div>`
+    : `<div style="font-size:0.8rem;color:#999;font-style:italic;">Aucune fiche disponible</div>`;
+  return `<div class="popup-head">${pt.lieu}</div>
+          <div class="popup-body">${chronoTag}${pdfsEl}</div>`;
+}
+
+// ═══════════════════════════════
+// MENU DÉROULANT
+// ═══════════════════════════════
+const sel = document.getElementById('site-select');
+POINTS.forEach(pt => {
+  const o = document.createElement('option');
+  o.value = pt.id;
+  o.textContent = pt.chrono ? `${pt.chrono} — ${pt.lieu}` : pt.lieu;
+  sel.appendChild(o);
+});
+sel.addEventListener('change', () => {
+  const id = parseInt(sel.value);
+  if (id) selectSite(id, true); else clearSel();
+});
+
+// ═══════════════════════════════
+// SÉLECTION
+// ═══════════════════════════════
+let currentId = null;
+
+function selectSite(id, fly) {
+  currentId = id;
+  const pt = POINTS.find(p => p.id === id);
+  if (!pt) return;
+
+  sel.value = id;
+
+  // Mise à jour icônes
+  POINTS.forEach(p => markers[p.id].setIcon(pinIcon(p.pdfs.length > 0, p.id === id)));
+
+  // Mise à jour labels
+  POINTS.forEach(p => {
+    const el = document.getElementById(`lbl-${p.id}`);
+    if (el) el.className = p.id === id ? 'map-label active' : 'map-label';
+  });
+
+  if (fly) map.flyTo([pt.lat, pt.lon], 14, { duration: 1.2 });
+  markers[id].openPopup();
+
+  renderCard(pt);
+  const bc = document.getElementById('btn-center');
+  bc.style.display = 'flex';
+
+  // Mobile : fermer panneau après sélection
+  if (window.innerWidth <= 680) document.getElementById('panel').classList.remove('open');
+}
+
+function clearSel() {
+  currentId = null;
+  POINTS.forEach(p => markers[p.id].setIcon(pinIcon(p.pdfs.length > 0, false)));
+  POINTS.forEach(p => {
+    const el = document.getElementById(`lbl-${p.id}`);
+    if (el) el.className = 'map-label';
+  });
+  document.getElementById('card-container').innerHTML = '';
+  document.getElementById('btn-center').style.display = 'none';
+}
+
+function centerOnSelected() {
+  if (!currentId) return;
+  const pt = POINTS.find(p => p.id === currentId);
+  if (pt) map.flyTo([pt.lat, pt.lon], 15, { duration: 1.0 });
+}
+
+function renderCard(pt) {
+  const pdfsHtml = pt.pdfs.length > 0
+    ? `<div class="pdf-section-title">📄 Fiches disponibles</div>
+       <div class="pdf-list">${pt.pdfs.map(p =>
+         `<a class="pdf-btn" href="${p.file}" download>
+            <span>📋</span><span class="lbl">${p.label}</span><span>⬇</span>
+          </a>`).join('')}</div>`
+    : `<div class="no-pdf">Aucune fiche pour ce point</div>`;
+
+  document.getElementById('card-container').innerHTML = `
+    <div class="site-card">
+      <div class="site-card-head">
+        <span>📍</span>
+        <span class="site-card-name">${pt.lieu}</span>
+        ${pt.chrono ? `<span class="chrono-badge">${pt.chrono}</span>` : ''}
+      </div>
+      <div class="site-card-body">
+        <div class="coords-line">${pt.lat.toFixed(5)}° N &nbsp;|&nbsp; ${Math.abs(pt.lon).toFixed(5)}° O</div>
+        ${pdfsHtml}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════
+// BURGER MOBILE
+// ═══════════════════════════════
+document.getElementById('burger').addEventListener('click', () =>
+  document.getElementById('panel').classList.toggle('open'));
+
+map.on('click', () => {
+  if (window.innerWidth <= 680) document.getElementById('panel').classList.remove('open');
+});
+</script>
+</body>
+</html>
