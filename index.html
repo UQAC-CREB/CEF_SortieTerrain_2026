@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CEF 2026 — Sortie Terrain</title>
+<title>Sortie Terrain - Colloque du CEF 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -290,23 +290,25 @@
 
   /* Labels carte */
   .map-label {
-    background: rgba(255,255,255,0.95);
-    border: 1.5px solid #222;
+    display: inline-block;
+    background: rgba(255,255,255,0.93);
+    border: 1.5px solid #333;
     border-radius: 3px;
-    padding: 3px 7px;
+    padding: 3px 8px;
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 12px;
     font-weight: 700;
     color: #1a1a1a;
     white-space: nowrap;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.30);
     pointer-events: none;
+    transform: translateX(6px) translateY(-50%);
   }
   .map-label.active {
     background: var(--vert);
     color: var(--creme);
     border-color: var(--brun);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.45);
     font-size: 13px;
   }
 
@@ -380,7 +382,7 @@
 <body>
 
 <header>
-  <div class="header-title">🌲 <span>CEF</span>&nbsp;Sortie terrain</div>
+  <div class="header-title">🌲 <span>Sortie Terrain</span> — Colloque du CEF 2026</div>
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="header-badge">Colloque 2026</div>
     <button class="burger" id="burger" aria-label="Menu">
@@ -524,10 +526,12 @@ function pinIcon(hasPdf, active) {
 const markers = {}, labelMarkers = {};
 
 POINTS.forEach(pt => {
-  // Label permanent
+  // Label permanent — iconSize [0,0] + transform CSS = la boîte s'affiche pleine largeur à droite du pin
   const lbl = L.divIcon({
     html: `<div class="map-label" id="lbl-${pt.id}">${pt.lieu}</div>`,
-    className: '', iconAnchor: [-(pt.lieu.length * 3.5), 14]
+    className: '',
+    iconSize: [0, 0],
+    iconAnchor: [0, 14]
   });
   labelMarkers[pt.id] = L.marker([pt.lat, pt.lon], { icon: lbl, interactive: false }).addTo(map);
 
